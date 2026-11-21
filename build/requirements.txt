@@ -1,0 +1,7 @@
+icalendar
+recurring_ical_events
+requests
+pillow
+pillow-heif
+numpy
+cryptography

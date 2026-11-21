@@ -1,0 +1,55 @@
+name: Build dashboard
+
+on:
+  schedule:
+    - cron: "17 * * * *"      # every hour (UTC), at :17
+  workflow_dispatch:          # "Run workflow" button
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools for reading the lunch menu
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils tesseract-ocr
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Python packages
+        run: pip install -r build/requirements.txt
+
+      - name: Build site
+        env:
+          DASH_PASSPHRASE: ${{ secrets.DASH_PASSPHRASE }}
+          DROPBOX_LINK: ${{ secrets.DROPBOX_LINK }}
+          FAMILY_CALENDARS: ${{ secrets.FAMILY_CALENDARS }}
+        run: python build/build.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

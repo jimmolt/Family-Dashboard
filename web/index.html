@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d2327'/%3E%3Cpath d='M14 32 32 16l18 16v18H38V38H26v12H14z' fill='%23ffc94d'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0c1018">
+<title>Family Dashboard</title>
+<style>
+  :root {
+    --panel: rgba(12, 16, 24, 0.72);
+    --line: rgba(255, 255, 255, 0.10);
+    --text: #f3f5f8;
+    --dim: #a9b2c0;
+    --accent: #ffc94d;
+    --navy: #1d5d99;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #000; color: var(--text);
+    font-family: "Inter", "Segoe UI", "DejaVu Sans", system-ui, sans-serif; cursor: none; }
+
+  /* ---------- photo slideshow (two layers that crossfade) ---------- */
+  .photo { position: fixed; inset: 0; background: #000 center / cover no-repeat;
+    opacity: 0; transition: opacity 2s ease; }
+  .photo.show { opacity: 1; }
+  .shade { position: fixed; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 38%,
+                rgba(0,0,0,0) 62%, rgba(0,0,0,.55) 100%); }
+
+  /* ---------- layout ---------- */
+  .wrap { position: fixed; inset: 0; display: grid; gap: 1.6vh;
+    grid-template-columns: 31vw 1fr 29vw; padding: 2.4vh 1.6vw; }
+  .col { display: flex; flex-direction: column; gap: 1.6vh; min-height: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 18px; padding: 1.6vh 1.2vw; min-height: 0; }
+  .panel h2 { font-size: 1.45vh; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); font-weight: 600; margin-bottom: 1vh; }
+  .grow { flex: 1; overflow: hidden; }
+
+  /* ---------- clock + weather ---------- */
+  .clock { font-size: 11vh; font-weight: 300; line-height: 1; letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums; }
+  .clock small { font-size: 3.4vh; color: var(--dim); margin-left: .4vw; }
+  .date { font-size: 3vh; color: var(--dim); margin-top: .6vh; }
+  .now { display: flex; align-items: center; gap: 1vw; }
+  .now .icon { font-size: 6.5vh; }
+  .now .temp { font-size: 6.5vh; font-weight: 300; }
+  .now .desc { font-size: 2vh; color: var(--dim); line-height: 1.4; }
+  .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4vw;
+    margin-top: 1.4vh; text-align: center; }
+  .days div { font-size: 1.8vh; color: var(--dim); line-height: 1.5; }
+  .days b { display: block; color: var(--text); font-weight: 600; }
+  .days .i { font-size: 3vh; }
+  .days .pop { color: #7cc4ff; font-size: 1.5vh; }
+
+  /* ---------- event lists ---------- */
+  .day-h { font-size: 1.7vh; font-weight: 700; color: var(--accent);
+    margin: 1.2vh 0 .5vh; }
+  .day-h:first-of-type { margin-top: 0; }
+  .ev { display: grid; grid-template-columns: 7.6vh 1fr; gap: .6vw;
+    padding: .55vh 0; border-bottom: 1px solid var(--line); font-size: 2vh;
+    align-items: baseline; }
+  .ev:last-child { border-bottom: 0; }
+  .ev .t { color: var(--dim); font-size: 1.75vh; font-variant-numeric: tabular-nums; }
+  .ev .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev .who { display: inline-block; width: .9vh; height: .9vh; border-radius: 50%;
+    margin-right: .5vw; vertical-align: middle; }
+  .ev .where { color: var(--dim); font-size: 1.55vh; }
+  .ev.home .title { color: var(--accent); }
+  .empty { color: var(--dim); font-size: 1.9vh; font-style: italic; }
+
+  /* ---------- lunch ---------- */
+  .lunch img { width: 100%; aspect-ratio: 1.7; object-fit: contain; border-radius: 10px; background: #fff; display: block; }
+  .lunch h2 span { color: var(--accent); }
+  .warn { position: fixed; right: 1vw; bottom: .6vh; font-size: 1.3vh; color: #ff8a8a; }
+  .lock { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); }
+  .lock[hidden] { display: none; }
+  .lock form { background: #141a24; border: 1px solid var(--line); border-radius: 18px; padding: 3vh 2.4vw;
+    display: grid; gap: 1.4vh; font-size: 2.2vh; width: min(90vw, 560px); cursor: auto; }
+  .lock input, .lock button { font: inherit; padding: 1vh 1vw; border-radius: 10px; border: 1px solid #334; }
+  .lock input { background: #0b0f16; color: var(--text); }
+  .lock button { background: var(--navy); color: #fff; border: 0; cursor: pointer; }
+  .lockmsg { color: #ff8a8a; font-size: 1.8vh; }
+</style>
+</head>
+<body>
+<div class="photo" id="p0"></div>
+<div class="photo" id="p1"></div>
+<div class="shade"></div>
+
+<div class="wrap">
+  <div class="col">
+    <div class="panel">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="panel" id="weather"><h2>Weather</h2><div class="empty">Loading…</div></div>
+    <div class="panel grow"><h2>Family calendar</h2><div id="family" class="empty">Loading…</div></div>
+  </div>
+
+  <div></div><!-- the photo shows through here -->
+
+  <div class="col">
+    <div class="panel lunch" id="lunch"><h2>Lunch</h2><div class="empty">Loading…</div></div>
+    <div class="panel grow"><h2>Chargers sports</h2><div id="sports" class="empty">Loading…</div></div>
+    <div class="panel"><h2>School</h2><div id="school" class="empty">Loading…</div></div>
+  </div>
+</div>
+<div class="warn" id="warn"></div>
+
+<div class="lock" id="lock" hidden>
+  <form id="lockform">
+    <div>🔒 Enter the family passphrase to show calendars &amp; photos</div>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="Passphrase">
+    <button>Unlock</button>
+    <div id="lockmsg" class="lockmsg"></div>
+  </form>
+</div>
+
+<script>
+// Dates arrive as 'YYYY-MM-DD' and are built as LOCAL dates on purpose —
+// new Date('2026-12-04') would be UTC midnight and show up a day early.
+const ymd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+function todayISO() { return iso(new Date()); }
+function time12(hhmm) {
+  if (!hhmm) return 'All day';
+  let [h, m] = hhmm.split(':').map(Number);
+  const ap = h < 12 ? 'a' : 'p'; h = h % 12 || 12;
+  return m ? `${h}:${String(m).padStart(2,'0')}${ap}` : `${h}${ap}`;
+}
+function daysFromToday(s) { const t = new Date(); t.setHours(0,0,0,0); return Math.round((ymd(s) - t) / 864e5); }
+function dayLabel(s) {
+  const n = daysFromToday(s);
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Tomorrow';
+  return ymd(s).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+function shortDay(s) {
+  const n = daysFromToday(s);
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Tmrw';
+  return ymd(s).toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + ymd(s).getDate();
+}
+function rangeNote(e) {
+  if (!e.end || e.end === e.date) return '';
+  return ` <span class="where">thru ${ymd(e.end).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span>`;
+}
+// Events still happening today or later (data can be up to an hour old).
+const upcoming = list => list.filter(e => (e.end || e.date) >= todayISO());
+
+async function get(url, as = 'json') {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(url + ' ' + r.status);
+  return as === 'json' ? r.json() : r.arrayBuffer();
+}
+const problems = {};
+function setWarn(key, msg) {
+  if (msg) problems[key] = msg; else delete problems[key];
+  $('warn').textContent = Object.values(problems).join(' · ');
+}
+
+// Drop rows from the bottom until a list fits its panel (no half-cut rows).
+function fit(list) {
+  const panel = list.parentElement;
+  while (panel.scrollHeight > panel.clientHeight + 1 && list.lastElementChild) {
+    list.lastElementChild.remove();
+    while (list.lastElementChild && list.lastElementChild.classList.contains('day-h'))
+      list.lastElementChild.remove();
+  }
+}
+let lastSchool = null, lastFamily = null;
+function refit() { if (lastSchool) renderSchool(lastSchool); if (lastFamily) renderFamily(lastFamily); }
+window.addEventListener('resize', refit);
+
+// ---------------- encryption (AES-GCM, key from passphrase via PBKDF2) -----
+let meta = null, key = null;
+async function makeKey(pass) {
+  const salt = Uint8Array.from(atob(meta.salt), c => c.charCodeAt(0));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: meta.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+}
+async function decrypt(buf) {
+  const b = new Uint8Array(buf);
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12));
+}
+function passphrase() {
+  // Kiosk links carry it after '#k=' — that part of a URL never leaves the device.
+  const m = location.hash.match(/k=([^&]+)/);
+  if (m) { const p = decodeURIComponent(m[1]); store.set('dash-pass', p); return p; }
+  return store.get('dash-pass');
+}
+
+// ---------------- clock ----------------
+function tick() {
+  const n = new Date();
+  $('clock').innerHTML = `${n.getHours() % 12 || 12}:${String(n.getMinutes()).padStart(2,'0')}<small>${n.getHours() < 12 ? 'AM' : 'PM'}</small>`;
+  $('date').textContent = n.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+// ---------------- weather (live from Open-Meteo) ----------------
+const WMO = {0:['Clear','☀️'],1:['Mostly clear','🌤️'],2:['Partly cloudy','⛅'],3:['Cloudy','☁️'],45:['Fog','🌫️'],48:['Fog','🌫️'],
+  51:['Drizzle','🌦️'],53:['Drizzle','🌦️'],55:['Drizzle','🌦️'],56:['Freezing drizzle','🌧️'],57:['Freezing drizzle','🌧️'],
+  61:['Rain','🌧️'],63:['Rain','🌧️'],65:['Heavy rain','🌧️'],66:['Freezing rain','🌧️'],67:['Freezing rain','🌧️'],
+  71:['Snow','🌨️'],73:['Snow','🌨️'],75:['Heavy snow','❄️'],77:['Snow grains','🌨️'],80:['Showers','🌦️'],81:['Showers','🌦️'],
+  82:['Heavy showers','⛈️'],85:['Snow showers','🌨️'],86:['Snow showers','🌨️'],95:['Thunderstorms','⛈️'],96:['Thunderstorms','⛈️'],99:['Thunderstorms','⛈️']};
+async function loadWeather() {
+  try {
+    const w = meta.weather;
+    const q = new URLSearchParams({ latitude: w.lat, longitude: w.lon,
+      current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m',
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+      temperature_unit: 'fahrenheit', wind_speed_unit: 'mph', timezone: meta.timezone, forecast_days: 5 });
+    const j = await get('https://api.open-meteo.com/v1/forecast?' + q);
+    const c = j.current, d = j.daily, [desc, icon] = WMO[c.weather_code] || ['', '🌡️'];
+    $('weather').innerHTML = `<h2>Weather · ${esc(w.name)}</h2>
+      <div class="now"><span class="icon">${icon}</span><span class="temp">${Math.round(c.temperature_2m)}°</span>
+        <span class="desc">${desc}<br>Feels ${Math.round(c.apparent_temperature)}° · Wind ${Math.round(c.wind_speed_10m)} mph</span></div>
+      <div class="days">${d.time.map((t, i) => `<div><b>${shortDay(t)}</b>
+        <span class="i">${(WMO[d.weather_code[i]] || ['', '🌡️'])[1]}</span><br>${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°
+        ${d.precipitation_probability_max[i] ? `<br><span class="pop">💧${d.precipitation_probability_max[i]}%</span>` : ''}</div>`).join('')}</div>`;
+    setWarn('weather');
+  } catch (e) {
+    setWarn('weather', 'weather offline');
+    if (/Loading/.test($('weather').textContent)) $('weather').innerHTML = '<h2>Weather</h2><div class="empty">Can\'t reach the weather service right now</div>';
+  }
+}
+
+// ---------------- lists ----------------
+function eventsByDay(events, row) {
+  if (!events.length) return '<div class="empty">Nothing scheduled</div>';
+  let html = '', last = '';
+  for (const e of events) {
+    const d = e.date < todayISO() ? todayISO() : e.date;   // multi-day already started
+    if (d !== last) { html += `<div class="day-h">${dayLabel(d)}</div>`; last = d; }
+    html += row(e);
+  }
+  return html;
+}
+function renderFamily(events) {
+  $('family').className = '';
+  $('family').innerHTML = eventsByDay(upcoming(events), e => `<div class="ev">
+    <span class="t">${time12(e.time)}</span>
+    <span class="title">${e.colors.map(c => `<span class="who" style="background:${esc(c)}"></span>`).join('')}${esc(e.title)}${rangeNote(e)}</span></div>`);
+  fit($('family'));
+}
+function renderSchool(s) {
+  const sc = upcoming(s.school).slice(0, 8);
+  $('school').className = '';
+  $('school').innerHTML = sc.length ? sc.map(e => `<div class="ev ${/no school|break|early dismissal|late start/i.test(e.title) ? 'home' : ''}">
+    <span class="t">${shortDay(e.date < todayISO() ? todayISO() : e.date)}</span>
+    <span class="title">${esc(e.title)}${rangeNote(e)}</span></div>`).join('')
+    : '<div class="empty">Nothing coming up</div>';
+  // School panel sizes itself first; sports fills whatever space is left.
+  $('sports').className = '';
+  $('sports').innerHTML = eventsByDay(upcoming(s.sports), e => {
+    const home = /spalding|cedar rapids/i.test(e.where) && !/@/.test(e.title);
+    return `<div class="ev ${home ? 'home' : ''}"><span class="t">${time12(e.time)}</span>
+      <span class="title">${esc(e.title)}${e.where ? `<br><span class="where">${esc(e.where)}</span>` : ''}</span></div>`;
+  });
+  fit($('sports'));
+}
+async function loadSchool() {
+  try { lastSchool = await get('data/school.json'); renderSchool(lastSchool); setWarn('school'); }
+  catch (e) { setWarn('school', 'school calendar offline'); }
+}
+
+// ---------------- lunch ----------------
+function lunchDay() {
+  const n = new Date(), [hh, mm] = (meta.lunch_cutoff || '12:30').split(':').map(Number);
+  const d = new Date(n); d.setHours(0,0,0,0);
+  if (d.getDay() === 0 || d.getDay() === 6 || n.getHours() * 60 + n.getMinutes() >= hh * 60 + mm) {
+    do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  }
+  return iso(d);
+}
+async function loadLunch() {
+  try {
+    const days = await get('data/lunch.json'), d = lunchDay(), img = days[d];
+    $('lunch').innerHTML = `<h2>Breakfast &amp; lunch · <span>${dayLabel(d)}</span></h2>` +
+      (img ? `<img src="${img}?v=${meta.built}" alt="Menu" onload="refit()">`
+           : `<div class="empty">No menu for ${dayLabel(d).toLowerCase()} — add this month's PDF to Dropbox › Kitchen Display › Lunch</div>`);
+  } catch (e) { setWarn('lunch', 'lunch offline'); }
+}
+
+// ---------------- private: family calendar + photos ----------------
+let photos = [], pi = 0, layer = 0, shownURL = [null, null];
+async function loadPrivate() {
+  if (!meta.private) { $('family').innerHTML = '<div class="empty">Not set up yet</div>'; return; }
+  if (!key) return;
+  try {
+    const p = JSON.parse(new TextDecoder().decode(await decrypt(await get('data/private.bin', 'buf'))));
+    lastFamily = p.events; renderFamily(p.events);
+    setWarn('cal', p.errors.length ? `calendar: ${p.errors.join(', ')}` : '');
+    if (p.photos.join() !== photos.join()) {
+      photos = p.photos.slice().sort(() => Math.random() - .5); pi = 0;
+      if (!shownURL[0] && !shownURL[1]) nextPhoto();
+    }
+  } catch (e) {
+    if (e.name === 'OperationError') return askPass('That passphrase didn\'t work — try again.');
+    setWarn('cal', 'calendar offline');
+  }
+}
+async function nextPhoto() {
+  if (!photos.length || !key) return;
+  const name = photos[pi++ % photos.length];
+  try {
+    const jpg = await decrypt(await get('photos/' + name, 'buf'));
+    const url = URL.createObjectURL(new Blob([jpg], { type: 'image/jpeg' }));
+    const img = new Image();
+    img.onload = () => {
+      const show = $('p' + layer), hide = $('p' + (1 - layer));
+      show.style.backgroundImage = `url("${url}")`;
+      show.classList.add('show'); hide.classList.remove('show');
+      // free the photo that was on this layer before (keeps the Zero's RAM low)
+      if (shownURL[layer]) URL.revokeObjectURL(shownURL[layer]);
+      shownURL[layer] = url; layer = 1 - layer;
+    };
+    img.src = url;
+  } catch (e) { /* skip this one; next tick tries another */ }
+}
+
+// ---------------- passphrase prompt ----------------
+function askPass(msg = '') {
+  key = null; store.del('dash-pass');
+  $('lockmsg').textContent = msg; $('lock').hidden = false; $('pass').focus();
+}
+$('lockform').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const p = $('pass').value; if (!p) return;
+  store.set('dash-pass', p); $('lock').hidden = true;
+  key = await makeKey(p); loadPrivate();
+});
+window.addEventListener('keydown', e => { if (e.key === 'L' && e.shiftKey) askPass(); });
+
+// ---------------- start ----------------
+(async () => {
+  tick(); setInterval(tick, 1000);
+  for (;;) {           // wait for the network on boot instead of giving up
+    try { meta = await get('data/meta.json'); break; }
+    catch (e) { setWarn('net', 'waiting for network…'); await new Promise(r => setTimeout(r, 15000)); }
+  }
+  setWarn('net'); document.title = meta.title + ' Dashboard';
+  loadWeather(); setInterval(loadWeather, 15 * 60e3);
+  loadSchool(); loadLunch();
+  const p = passphrase();
+  if (meta.private) { if (p) { key = await makeKey(p); loadPrivate(); } else askPass(); }
+  else loadPrivate();
+  setInterval(nextPhoto, (meta.photo_seconds || 30) * 1000);
+  // Every 20 min pick up the newest build (GitHub rebuilds hourly).
+  setInterval(async () => {
+    try { const m = await get('data/meta.json'); if (m.built !== meta.built) { const k = key; meta = m;
+      if (k && meta.private) key = await makeKey(passphrase() || ''); loadSchool(); loadLunch(); loadPrivate(); } } catch (e) {}
+    loadLunch();
+  }, 20 * 60e3);
+  setInterval(() => { const n = new Date(); if (n.getHours() === 3 && n.getMinutes() === 0) location.reload(); }, 60e3);
+})();
+</script>
+</body>
+</html>
