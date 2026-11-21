@@ -190,7 +190,7 @@ class MenuMonth:
         for wi, (t, b) in enumerate(weeks):
             for ci, (l, r) in enumerate(cols):
                 d = anchor + dt.timedelta(days=7 * wi + ci)
-                cells[d] = (l + 3, t + 3, r - 2, b - 2)
+                cells[d] = (l + 7, t + 5, r - 6, b - 4)
         return cells
 
     def crop(self, day):
