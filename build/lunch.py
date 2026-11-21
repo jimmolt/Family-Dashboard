@@ -40,40 +40,62 @@ def _max_run(row):
     return int(lens[i]), int(starts[i]), int(ends[i])
 
 
+def deskew(img):
+    """Straighten a slightly crooked scan: try small rotations and keep the one
+    where the table's horizontal lines line up best (sharpest row profile)."""
+    gray = img.convert("L")
+    best, best_angle = -1, 0.0
+    for step in range(-60, 61):            # -1.5 .. +1.5 degrees
+        a = step / 40
+        ink = np.array(gray.rotate(a, resample=Image.NEAREST, fillcolor=255)) < 200
+        prof = np.sort(ink.mean(axis=1))[-6:]   # the few strongest rows = grid lines
+        score = float(prof.sum())
+        if score > best:
+            best, best_angle = score, a
+    if abs(best_angle) < 0.02:
+        return img
+    return img.rotate(best_angle, resample=Image.BICUBIC, fillcolor="white")
+
+
 def find_grid(img):
-    """Return (row_lines, col_lines) in pixel coords for the calendar table."""
-    ink = np.array(img.convert("L")) < DARK
-    h, w = ink.shape
-    m = 8  # ignore scanner smudges along the page edges
-    ink[:m, :] = ink[-m:, :] = False
-    ink[:, :m] = ink[:, -m:] = False
-    # Table left/right edges = median extent of the long horizontal lines.
-    runs = [_max_run(ink[y]) for y in range(h)]
-    long_runs = [r for r in runs if r[0] > 0.5 * w]
-    if not long_runs:
-        raise ValueError("no table found")
-    x0 = int(np.median([r[1] for r in long_runs]))
-    x1 = int(np.median([r[2] for r in long_runs]))
-    # Scans are slightly crooked, so thicken the ink a couple of pixels
-    # before asking "is this row/column a solid line across the table?"
-    def thicken(a, axis):
-        out = a.copy()
+    """Return (row_lines, col_lines) in pixel coords for the calendar table.
+
+    Scans vary: lines can be faint, dotted by the scanner, or a hair crooked,
+    so ink is thickened a couple of pixels each way before we look for
+    rows/columns that run (nearly) all the way across the table."""
+    g = np.array(img.convert("L"))
+    h, w = g.shape
+    for dark in (DARK, 200, 215):
+        ink = g < dark
+        m = 8  # ignore scanner smudges along the page edges
+        ink[:m, :] = ink[-m:, :] = False
+        ink[:, :m] = ink[:, -m:] = False
+        thick = ink.copy()
         for k in (1, 2):
-            out |= np.roll(a, k, axis=axis) | np.roll(a, -k, axis=axis)
-        return out
-    cover = thicken(ink, 0)[:, x0:x1].mean(axis=1)
-    hlines = _groups([y for y in range(h) if cover[y] > 0.9])
-    if len(hlines) < 3:
-        raise ValueError("couldn't find calendar rows")
-    band = thicken(ink, 1)[hlines[0]:hlines[-1], :]
-    vlines = _groups([x for x in range(max(0, x0 - 5), min(w, x1 + 5))
-                      if band[:, x].mean() > 0.9])
-    # Clip art can break an outer border; fall back to the table edges.
-    if not vlines or vlines[0] > x0 + 20:
-        vlines.insert(0, x0)
-    if vlines[-1] < x1 - 20:
-        vlines.append(x1)
-    return hlines, vlines
+            for ax in (0, 1):
+                thick |= np.roll(ink, k, axis=ax) | np.roll(ink, -k, axis=ax)
+        # Table left/right = extent of the longest thickened horizontal runs.
+        runs = [_max_run(thick[y]) for y in range(h)]
+        long_runs = [r for r in runs if r[0] > 0.6 * w]
+        if len(long_runs) < 3:
+            continue
+        x0 = int(np.median([r[1] for r in long_runs]))
+        x1 = int(np.median([r[2] for r in long_runs]))
+        cover = thick[:, x0:x1].mean(axis=1)
+        hlines = _groups([y for y in range(h) if cover[y] > 0.9])
+        if len(hlines) < 3:
+            continue
+        band = thick[hlines[0]:hlines[-1], :]
+        vlines = _groups([x for x in range(max(0, x0 - 5), min(w, x1 + 5))
+                          if band[:, x].mean() > 0.85])
+        # Clip art can break an outer border; fall back to the table edges.
+        if not vlines or vlines[0] > x0 + 20:
+            vlines.insert(0, x0)
+        if vlines[-1] < x1 - 20:
+            vlines.append(x1)
+        if len(vlines) >= 6:
+            return hlines, vlines
+    raise ValueError("couldn't find the menu grid")
 
 
 def _cell_number(img, box):
@@ -126,9 +148,8 @@ class MenuMonth:
         cache_dir.mkdir(parents=True, exist_ok=True)
         png = cache_dir / (self.pdf.stem.replace(" ", "_") + ".png")
         if not png.exists() or png.stat().st_mtime < self.pdf.stat().st_mtime:
-            self.img = render(self.pdf, png)
-        else:
-            self.img = Image.open(png)
+            deskew(render(self.pdf, png).convert("RGB")).save(png)
+        self.img = Image.open(png).convert("RGB")
         self.year, self.month = month_from_name(self.pdf) or (None, None)
         self.cells = self._map_cells()
 
