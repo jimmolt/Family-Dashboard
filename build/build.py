@@ -142,6 +142,7 @@ def fetch_dropbox():
             menus.append(p)
         elif ext in IMG_EXT and "lunch" not in rel:
             photos.append(p)
+    print('dropbox menus:', ', '.join(sorted(m.name for m in menus)) or 'none')
     return sorted(photos), menus
 
 
