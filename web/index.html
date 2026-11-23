@@ -35,7 +35,7 @@
     border-radius: 18px; padding: 1.6vh 1.2vw; min-height: 0; }
   .panel h2 { font-size: 1.45vh; letter-spacing: .14em; text-transform: uppercase;
     color: var(--dim); font-weight: 600; margin-bottom: 1vh; }
-  .grow { flex: 1; overflow: hidden; }
+  .grow { flex: 1; overflow: hidden; min-height: 17vh; }
 
   /* ---------- clock + weather ---------- */
   .clock { font-size: 11vh; font-weight: 300; line-height: 1; letter-spacing: -.02em;
@@ -256,7 +256,7 @@ function renderFamily(events) {
   fit($('family'));
 }
 function renderSchool(s) {
-  const sc = upcoming(s.school).slice(0, 8);
+  const sc = upcoming(s.school).slice(0, 5);
   $('school').className = '';
   $('school').innerHTML = sc.length ? sc.map(e => `<div class="ev ${/no school|break|early dismissal|late start/i.test(e.title) ? 'home' : ''}">
     <span class="t">${shortDay(e.date < todayISO() ? todayISO() : e.date)}</span>
