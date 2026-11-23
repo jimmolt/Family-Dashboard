@@ -16,6 +16,7 @@ from PIL import Image
 MONTHS = {m.lower(): i for i, m in enumerate(calendar.month_name) if m}
 DARK = 170          # pixel value below this counts as "ink"
 RENDER_DPI = 150
+MENU_EXT = {".pdf", ".png", ".jpg", ".jpeg"}
 
 
 def _groups(values, gap=4):
@@ -148,7 +149,16 @@ class MenuMonth:
         cache_dir.mkdir(parents=True, exist_ok=True)
         png = cache_dir / (self.pdf.stem.replace(" ", "_") + ".png")
         if not png.exists() or png.stat().st_mtime < self.pdf.stat().st_mtime:
-            deskew(render(self.pdf, png).convert("RGB")).save(png)
+            if self.pdf.suffix.lower() == ".pdf":
+                src = render(self.pdf, png)
+            else:  # menu posted as a picture (PNG/JPG)
+                src = Image.open(self.pdf)
+                bg = Image.new("RGB", src.size, "white")
+                bg.paste(src, mask=src.split()[-1] if src.mode in ("RGBA", "LA") else None)
+                src = bg
+                if src.width > 1700:  # same scale as a 150-dpi PDF render
+                    src = src.resize((1650, round(src.height * 1650 / src.width)))
+            deskew(src.convert("RGB")).save(png)
         self.img = Image.open(png).convert("RGB")
         self.year, self.month = month_from_name(self.pdf) or (None, None)
         self.cells = self._map_cells()
@@ -207,8 +217,9 @@ class MenuMonth:
 
 def find_menu_for(day, menu_dir):
     """Newest PDF in menu_dir whose month covers `day` (incl. spillover)."""
-    pdfs = sorted(Path(menu_dir).glob("*.pdf"), key=lambda p: p.stat().st_mtime,
-                  reverse=True)
+    pdfs = sorted((p for p in Path(menu_dir).iterdir()
+                   if p.suffix.lower() in MENU_EXT),
+                  key=lambda p: p.stat().st_mtime, reverse=True)
     for p in pdfs:
         ym = month_from_name(p, day)
         if not ym:

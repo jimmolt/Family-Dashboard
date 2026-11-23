@@ -129,36 +129,49 @@ def fetch_dropbox():
     r = requests.get(link, timeout=300)
     r.raise_for_status()
     zipfile.ZipFile(io.BytesIO(r.content)).extractall(dest)
-    photos, pdfs = [], []
+    photos, menus = [], []
     for p in dest.rglob("*"):
         if not p.is_file() or p.name.startswith("."):
             continue
         rel = [x.lower() for x in p.relative_to(dest).parts[:-1]]
-        if p.suffix.lower() == ".pdf":
-            pdfs.append(p)
-        elif p.suffix.lower() in IMG_EXT and "lunch" not in rel:
+        ext = p.suffix.lower()
+        # Lunch menus: any PDF, or a picture with "menu" in its name or in a
+        # Lunch folder. Everything else that's a picture is a slideshow photo.
+        if ext == ".pdf" or (ext in lunch.MENU_EXT and
+                             ("menu" in p.stem.lower() or "lunch" in rel)):
+            menus.append(p)
+        elif ext in IMG_EXT and "lunch" not in rel:
             photos.append(p)
-    return sorted(photos), pdfs
+    return sorted(photos), menus
 
 
 # ------------------------------------------------------------- lunch
-def build_lunch(pdfs):
-    menu_dir = WORK / "menus"
-    menu_dir.mkdir(parents=True, exist_ok=True)
-    for p in list(pdfs) + list((ROOT / "menus").glob("*.pdf")):
-        shutil.copy2(p, menu_dir / p.name)
+def build_lunch(menus):
+    """One set of daily menu crops per school site (Spalding, Cedar Rapids)."""
     out_dir = SITE / "lunch"
     out_dir.mkdir(parents=True, exist_ok=True)
-    days, d = {}, today()
-    for _ in range(21):
-        if d.weekday() < 5:
-            img = lunch.lunch_image(d, menu_dir, WORK / "lunchcache")
-            if img:
-                name = f"{d.isoformat()}.png"
-                shutil.copy2(img, out_dir / name)
-                days[d.isoformat()] = f"lunch/{name}"
-        d += dt.timedelta(days=1)
-    return days
+    sources = list(menus) + [p for p in (ROOT / "menus").iterdir()
+                             if p.suffix.lower() in lunch.MENU_EXT]
+    sites = []
+    for site in CFG["lunch_sites"]:
+        pat = re.compile(site["match"], re.I)
+        menu_dir = WORK / "menus" / site["key"]
+        menu_dir.mkdir(parents=True, exist_ok=True)
+        for p in sources:
+            if pat.search(p.stem):
+                shutil.copy2(p, menu_dir / p.name)
+        days, d = {}, today()
+        for _ in range(21):
+            if d.weekday() < 5:
+                img = lunch.lunch_image(d, menu_dir, WORK / "lunchcache" / site["key"])
+                if img:
+                    name = f"{site['key']}-{d.isoformat()}.png"
+                    shutil.copy2(img, out_dir / name)
+                    days[d.isoformat()] = f"lunch/{name}"
+            d += dt.timedelta(days=1)
+        print(f"lunch {site['name']}: {len(days)} days")
+        sites.append({"key": site["key"], "name": site["name"], "days": days})
+    return {"sites": sites}
 
 
 # ------------------------------------------------------------- crypto
@@ -209,10 +222,9 @@ def main():
     school = step("school calendar", build_school, {"sports": [], "school": []})
     (SITE / "data" / "school.json").write_text(json.dumps(school))
 
-    photos, pdfs = step("dropbox", fetch_dropbox, ([], []))
-    days = step("lunch", lambda: build_lunch(pdfs), {})
-    (SITE / "data" / "lunch.json").write_text(json.dumps(days))
-    print(f"lunch: {len(days)} days")
+    photos, menus = step("dropbox", fetch_dropbox, ([], []))
+    lunches = step("lunch", lambda: build_lunch(menus), {"sites": []})
+    (SITE / "data" / "lunch.json").write_text(json.dumps(lunches))
 
     passphrase = os.environ.get("DASH_PASSPHRASE", "")
     salt = os.urandom(16)

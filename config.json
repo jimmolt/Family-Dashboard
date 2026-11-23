@@ -4,12 +4,26 @@
   "photo_seconds": 30,
   "lunch_cutoff": "12:30",
   "calendar_days": 8,
-
-  "weather": { "name": "Spalding", "lat": 41.6878, "lon": -98.3628 },
-
+  "weather": {
+    "name": "Spalding",
+    "lat": 41.6878,
+    "lon": -98.3628
+  },
   "school": {
     "ics_url": "https://calendar.google.com/calendar/ical/3n21pqflave42gp7beg3ltq9dk%40group.calendar.google.com/public/basic.ics",
     "days": 21,
     "sports_pattern": "\\b(BB|Wr|FB|VB|CC|SB|BSB|Golf|Track|Tr|Bowling|Basketball|Wrestling|Football|Volleyball|Baseball|Softball)\\b"
-  }
+  },
+  "lunch_sites": [
+    {
+      "key": "sp",
+      "name": "Spalding",
+      "match": "(^|[^a-z])sp([^a-z]|$)"
+    },
+    {
+      "key": "cr",
+      "name": "Cedar Rapids",
+      "match": "(^|[^a-z])cr([^a-z]|$)"
+    }
+  ]
 }
