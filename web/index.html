@@ -28,61 +28,77 @@
                 rgba(0,0,0,0) 62%, rgba(0,0,0,.55) 100%); }
 
   /* ---------- layout ---------- */
-  .wrap { position: fixed; inset: 0; display: grid; gap: 1.6vh;
-    grid-template-columns: 31vw 1fr 29vw; padding: 2.4vh 1.6vw; }
-  .col { display: flex; flex-direction: column; gap: 1.6vh; min-height: 0; }
+  .wrap { position: fixed; inset: 0; display: grid; gap: 1.6vmin;
+    grid-template-columns: 31vw 1fr 29vw; padding: 2.4vmin 1.6vmax; }
+  .col { display: flex; flex-direction: column; gap: 1.6vmin; min-height: 0; }
   .panel { background: var(--panel); border: 1px solid var(--line);
-    border-radius: 18px; padding: 1.6vh 1.2vw; min-height: 0; }
-  .panel h2 { font-size: 1.45vh; letter-spacing: .14em; text-transform: uppercase;
-    color: var(--dim); font-weight: 600; margin-bottom: 1vh; }
-  .grow { flex: 1; overflow: hidden; min-height: 17vh; }
+    border-radius: 18px; padding: 1.6vmin 1.2vmax; min-height: 0; }
+  .panel h2 { font-size: 1.45vmin; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); font-weight: 600; margin-bottom: 1vmin; }
+  .grow { flex: 1; overflow: hidden; min-height: 17vmin; }
 
   /* ---------- clock + weather ---------- */
-  .clock { font-size: 11vh; font-weight: 300; line-height: 1; letter-spacing: -.02em;
+  .clock { font-size: 11vmin; font-weight: 300; line-height: 1; letter-spacing: -.02em;
     font-variant-numeric: tabular-nums; }
-  .clock small { font-size: 3.4vh; color: var(--dim); margin-left: .4vw; }
-  .date { font-size: 3vh; color: var(--dim); margin-top: .6vh; }
-  .now { display: flex; align-items: center; gap: 1vw; }
-  .now .icon { font-size: 6.5vh; }
-  .now .temp { font-size: 6.5vh; font-weight: 300; }
-  .now .desc { font-size: 2vh; color: var(--dim); line-height: 1.4; }
-  .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4vw;
-    margin-top: 1.4vh; text-align: center; }
-  .days div { font-size: 1.8vh; color: var(--dim); line-height: 1.5; }
+  .clock small { font-size: 3.4vmin; color: var(--dim); margin-left: .4vmax; }
+  .date { font-size: 3vmin; color: var(--dim); margin-top: .6vmin; }
+  .now { display: flex; align-items: center; gap: 1vmax; }
+  .now .icon { font-size: 6.5vmin; }
+  .now .temp { font-size: 6.5vmin; font-weight: 300; }
+  .now .desc { font-size: 2vmin; color: var(--dim); line-height: 1.4; }
+  .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4vmax;
+    margin-top: 1.4vmin; text-align: center; }
+  .days div { font-size: 1.8vmin; color: var(--dim); line-height: 1.5; }
   .days b { display: block; color: var(--text); font-weight: 600; }
-  .days .i { font-size: 3vh; }
-  .days .pop { color: #7cc4ff; font-size: 1.5vh; }
+  .days .i { font-size: 3vmin; }
+  .days .pop { color: #7cc4ff; font-size: 1.5vmin; }
 
   /* ---------- event lists ---------- */
-  .day-h { font-size: 1.7vh; font-weight: 700; color: var(--accent);
-    margin: 1.2vh 0 .5vh; }
+  .day-h { font-size: 1.7vmin; font-weight: 700; color: var(--accent);
+    margin: 1.2vmin 0 .5vmin; }
   .day-h:first-of-type { margin-top: 0; }
-  .ev { display: grid; grid-template-columns: 7.6vh 1fr; gap: .6vw;
-    padding: .55vh 0; border-bottom: 1px solid var(--line); font-size: 2vh;
+  .ev { display: grid; grid-template-columns: 7.6vmin 1fr; gap: .6vmax;
+    padding: .55vmin 0; border-bottom: 1px solid var(--line); font-size: 2vmin;
     align-items: baseline; }
   .ev:last-child { border-bottom: 0; }
-  .ev .t { color: var(--dim); font-size: 1.75vh; font-variant-numeric: tabular-nums; }
+  .ev .t { color: var(--dim); font-size: 1.75vmin; font-variant-numeric: tabular-nums; }
   .ev .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ev .who { display: inline-block; width: .9vh; height: .9vh; border-radius: 50%;
-    margin-right: .5vw; vertical-align: middle; }
-  .ev .where { color: var(--dim); font-size: 1.55vh; }
+  .ev .who { display: inline-block; width: .9vmin; height: .9vmin; border-radius: 50%;
+    margin-right: .5vmax; vertical-align: middle; }
+  .ev .where { color: var(--dim); font-size: 1.55vmin; }
   .ev.home .title { color: var(--accent); }
-  .empty { color: var(--dim); font-size: 1.9vh; font-style: italic; }
+  .empty { color: var(--dim); font-size: 1.9vmin; font-style: italic; }
 
   /* ---------- lunch ---------- */
-  .lunch .site + .site { margin-top: 1vh; }
-  .lunch .site-name { font-size: 1.5vh; font-weight: 700; color: var(--accent); margin-bottom: .4vh; }
-  .lunch img { width: 100%; height: 15vh; object-fit: contain; border-radius: 10px; background: #fff; display: block; }
+  .lunch .site + .site { margin-top: 1vmin; }
+  .lunch .site-name { font-size: 1.5vmin; font-weight: 700; color: var(--accent); margin-bottom: .4vmin; }
+  .lunch img { width: 100%; height: 15vmin; object-fit: contain; border-radius: 10px; background: #fff; display: block; }
   .lunch h2 span { color: var(--accent); }
-  .warn { position: fixed; right: 1vw; bottom: .6vh; font-size: 1.3vh; color: #ff8a8a; }
+  .warn { position: fixed; right: 1vmax; bottom: .6vmin; font-size: 1.3vmin; color: #ff8a8a; }
   .lock { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); }
   .lock[hidden] { display: none; }
-  .lock form { background: #141a24; border: 1px solid var(--line); border-radius: 18px; padding: 3vh 2.4vw;
-    display: grid; gap: 1.4vh; font-size: 2.2vh; width: min(90vw, 560px); cursor: auto; }
-  .lock input, .lock button { font: inherit; padding: 1vh 1vw; border-radius: 10px; border: 1px solid #334; }
+  .lock form { background: #141a24; border: 1px solid var(--line); border-radius: 18px; padding: 3vmin 2.4vmax;
+    display: grid; gap: 1.4vmin; font-size: 2.2vmin; width: min(90vmax, 560px); cursor: auto; }
+  .lock input, .lock button { font: inherit; padding: 1vmin 1vmax; border-radius: 10px; border: 1px solid #334; }
   .lock input { background: #0b0f16; color: var(--text); }
   .lock button { background: var(--navy); color: #fff; border: 0; cursor: pointer; }
-  .lockmsg { color: #ff8a8a; font-size: 1.8vh; }
+  .lockmsg { color: #ff8a8a; font-size: 1.8vmin; }
+
+  /* ---------- portrait screens: photo on top, info below ---------- */
+  @media (orientation: portrait) {
+    .photo { bottom: auto; height: 36vh; }
+    .shade { background: linear-gradient(180deg, rgba(0,0,0,0) 26vh, rgba(0,0,0,.85) 36vh, #000 44vh); }
+    .wrap { grid-template-columns: 1fr 1fr; grid-template-rows: 28vh auto minmax(0, 1fr) minmax(0, .8fr);
+      grid-template-areas: "photo photo" "clock weather" "family lunch" "sports school";
+      padding: 1.6vmin 2.2vmin; gap: 1.6vmin; }
+    .col { display: contents; }
+    .a-photo { grid-area: photo; } .a-clock { grid-area: clock; } .a-weather { grid-area: weather; }
+    .a-family { grid-area: family; } .a-lunch { grid-area: lunch; }
+    .a-sports { grid-area: sports; min-height: 0; } .a-school { grid-area: school; overflow: hidden; }
+    .a-clock { display: flex; flex-direction: column; justify-content: center; }
+    .a-lunch { overflow: hidden; }
+    .lunch img { height: 9.5vh; }
+  }
 </style>
 </head>
 <body>
@@ -92,20 +108,20 @@
 
 <div class="wrap">
   <div class="col">
-    <div class="panel">
+    <div class="panel a-clock">
       <div class="clock" id="clock">--:--</div>
       <div class="date" id="date"></div>
     </div>
-    <div class="panel" id="weather"><h2>Weather</h2><div class="empty">Loading…</div></div>
-    <div class="panel grow"><h2>Family calendar</h2><div id="family" class="empty">Loading…</div></div>
+    <div class="panel a-weather" id="weather"><h2>Weather</h2><div class="empty">Loading…</div></div>
+    <div class="panel grow a-family"><h2>Family calendar</h2><div id="family" class="empty">Loading…</div></div>
   </div>
 
-  <div></div><!-- the photo shows through here -->
+  <div class="a-photo"></div><!-- the photo shows through here -->
 
   <div class="col">
-    <div class="panel lunch" id="lunch"><h2>Lunch</h2><div class="empty">Loading…</div></div>
-    <div class="panel grow"><h2>Chargers sports</h2><div id="sports" class="empty">Loading…</div></div>
-    <div class="panel"><h2>School</h2><div id="school" class="empty">Loading…</div></div>
+    <div class="panel lunch a-lunch" id="lunch"><h2>Lunch</h2><div class="empty">Loading…</div></div>
+    <div class="panel grow a-sports"><h2>Chargers sports</h2><div id="sports" class="empty">Loading…</div></div>
+    <div class="panel a-school"><h2>School</h2><div id="school" class="empty">Loading…</div></div>
   </div>
 </div>
 <div class="warn" id="warn"></div>
