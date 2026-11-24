@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Turn a fresh Raspberry Pi OS Lite install into a full-screen dashboard.
+# Turn a fresh Raspberry Pi OS Lite install (or Orange Pi / Armbian Debian
+# "server" image) into a full-screen dashboard.
 # On the Pi:
 #   curl -sLO https://jimmolt.github.io/Family-Dashboard/setup-kiosk.sh
 #   bash setup-kiosk.sh 'YOUR-PASSPHRASE'
@@ -21,6 +22,11 @@ SD_URL="${URL//%/%%}"
 echo "== Installing browser (15-30 min on a Zero) =="
 sudo apt-get update
 sudo apt-get install -y cage fonts-noto-color-emoji fonts-dejavu-core curl
+if grep -qi ubuntu /etc/os-release; then
+  echo "This looks like Ubuntu, whose Chromium is a snap package that won't run in"
+  echo "this kiosk. Please flash the Debian (Bookworm) server image instead."
+  exit 1
+fi
 if apt-cache show chromium >/dev/null 2>&1; then
   sudo apt-get install -y chromium; CHROME=/usr/bin/chromium
 else
@@ -59,8 +65,22 @@ EOF
 sudo chmod 600 /etc/systemd/system/kiosk.service   # passphrase lives here
 
 echo "== Keep screen on, add swap =="
-CMDLINE=/boot/firmware/cmdline.txt; [ -f "$CMDLINE" ] || CMDLINE=/boot/cmdline.txt
-grep -q consoleblank=0 "$CMDLINE" || sudo sed -i '1 s/$/ consoleblank=0/' "$CMDLINE"
+# Raspberry Pi keeps kernel options in cmdline.txt; Orange Pi / Armbian in
+# orangepiEnv.txt / armbianEnv.txt. Whichever exists gets consoleblank=0.
+for f in /boot/firmware/cmdline.txt /boot/cmdline.txt; do
+  if [ -f "$f" ]; then
+    grep -q consoleblank=0 "$f" || sudo sed -i '1 s/$/ consoleblank=0/' "$f"
+  fi
+done
+for f in /boot/orangepiEnv.txt /boot/armbianEnv.txt; do
+  if [ -f "$f" ] && ! grep -q consoleblank=0 "$f"; then
+    if grep -q '^extraargs=' "$f"; then
+      sudo sed -i 's/^extraargs=\(.*\)/extraargs=\1 consoleblank=0/' "$f"
+    else
+      echo 'extraargs=consoleblank=0' | sudo tee -a "$f" >/dev/null
+    fi
+  fi
+done
 if [ -f /etc/dphys-swapfile ]; then
   sudo sed -i 's/^#\?CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
   sudo systemctl restart dphys-swapfile || true
