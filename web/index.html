@@ -206,6 +206,14 @@ window.addEventListener('resize', refit);
 
 // ---------------- encryption (AES-GCM, key from passphrase via PBKDF2) -----
 let meta = null, key = null;
+async function refreshKey() {
+  try {
+    const m = await get('data/meta.json');
+    if (m.salt !== meta.salt || m.iter !== meta.iter) { meta = m; key = await makeKey(passphrase() || ''); return true; }
+    meta = m;
+  } catch (e) {}
+  return false;
+}
 async function makeKey(pass) {
   const salt = Uint8Array.from(atob(meta.salt), c => c.charCodeAt(0));
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
@@ -320,8 +328,9 @@ async function loadLunch() {
 }
 
 // ---------------- private: family calendar + photos ----------------
+let retryingPhoto = false;
 let photos = [], pi = 0, layer = 0, shownURL = [null, null];
-async function loadPrivate() {
+async function loadPrivate(retried = false) {
   if (!meta.private) { $('family').innerHTML = '<div class="empty">Not set up yet</div>'; return; }
   if (!key) return;
   try {
@@ -333,7 +342,11 @@ async function loadPrivate() {
       if (!shownURL[0] && !shownURL[1]) nextPhoto();
     }
   } catch (e) {
-    if (e.name === 'OperationError') return askPass('That passphrase didn\'t work — try again.');
+    if (e.name === 'OperationError') {
+      // Usually just a newer build with a new key: re-read it and try again once.
+      if (!retried && await refreshKey()) return loadPrivate(true);
+      return askPass('That passphrase didn\'t work — try again.');
+    }
     setWarn('cal', 'calendar offline');
   }
 }
@@ -362,7 +375,12 @@ async function nextPhoto() {
       shownURL[layer] = url; layer = 1 - layer;
     };
     img.src = url;
-  } catch (e) { /* skip this one; next tick tries another */ }
+  } catch (e) {
+    // Photo couldn't be unlocked (newer build) or was removed: pick up the
+    // newest key and photo list, then move straight on to the next photo.
+    if (e.name === 'OperationError' && await refreshKey()) loadPrivate();
+    else if (!retryingPhoto) { retryingPhoto = true; setTimeout(() => { retryingPhoto = false; nextPhoto(); }, 3000); }
+  }
 }
 
 // ---------------- passphrase prompt ----------------

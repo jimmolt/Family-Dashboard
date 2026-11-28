@@ -228,7 +228,9 @@ def main():
     (SITE / "data" / "lunch.json").write_text(json.dumps(lunches))
 
     passphrase = os.environ.get("DASH_PASSPHRASE", "")
-    salt = os.urandom(16)
+    # Same salt every build -> same key every build, so a page that's been
+    # open for hours can still unlock photos from the newest build.
+    salt = hashlib.sha256(b"molt-dashboard-salt:" + passphrase.encode()).digest()[:16]
     meta = {"built": now().isoformat(timespec="minutes"), "title": CFG["title"],
             "weather": CFG["weather"], "photo_seconds": CFG["photo_seconds"],
             "lunch_cutoff": CFG["lunch_cutoff"], "timezone": str(TZ),
