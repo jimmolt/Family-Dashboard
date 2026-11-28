@@ -40,8 +40,11 @@ Description=Family dashboard kiosk
 After=network-online.target systemd-user-sessions.service
 Wants=network-online.target
 Conflicts=getty@tty1.service
+# Never give up retrying (e.g. internet slow to come back after a power cut)
+StartLimitIntervalSec=0
 
 [Service]
+TimeoutStartSec=0
 User=$ME
 PAMName=login
 TTYPath=/dev/tty1
