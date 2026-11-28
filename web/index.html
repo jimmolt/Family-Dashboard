@@ -20,8 +20,13 @@
     font-family: "Inter", "Segoe UI", "DejaVu Sans", system-ui, sans-serif; cursor: none; }
 
   /* ---------- photo slideshow (two layers that crossfade) ---------- */
-  .photo { position: fixed; inset: 0; background: #000 center / cover no-repeat;
+  .photo { position: fixed; inset: 0; background: #000; overflow: hidden;
     opacity: 0; transition: opacity 2s ease; }
+  /* .fill = tiny blurred copy stretched behind; .pic = the whole photo */
+  .photo .fill { position: absolute; inset: -4%; background: center / cover no-repeat;
+    filter: brightness(.6) saturate(1.2); }
+  .photo .pic { position: absolute; inset: 0; background: center / contain no-repeat; }
+  .photo .pic.cover { background-size: cover; }
   .photo.show { opacity: 1; }
   .shade { position: fixed; inset: 0; pointer-events: none;
     background: linear-gradient(90deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 38%,
@@ -102,8 +107,8 @@
 </style>
 </head>
 <body>
-<div class="photo" id="p0"></div>
-<div class="photo" id="p1"></div>
+<div class="photo" id="p0"><div class="fill"></div><div class="pic"></div></div>
+<div class="photo" id="p1"><div class="fill"></div><div class="pic"></div></div>
 <div class="shade"></div>
 
 <div class="wrap">
@@ -160,17 +165,17 @@ function dayLabel(s) {
   const n = daysFromToday(s);
   if (n === 0) return 'Today';
   if (n === 1) return 'Tomorrow';
-  return ymd(s).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  return ymd(s).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 function shortDay(s) {
   const n = daysFromToday(s);
   if (n === 0) return 'Today';
   if (n === 1) return 'Tmrw';
-  return ymd(s).toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + ymd(s).getDate();
+  return ymd(s).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + ymd(s).getDate();
 }
 function rangeNote(e) {
   if (!e.end || e.end === e.date) return '';
-  return ` <span class="where">thru ${ymd(e.end).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span>`;
+  return ` <span class="where">thru ${ymd(e.end).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
 }
 // Events still happening today or later (data can be up to an hour old).
 const upcoming = list => list.filter(e => (e.end || e.date) >= todayISO());
@@ -222,7 +227,7 @@ function passphrase() {
 function tick() {
   const n = new Date();
   $('clock').innerHTML = `${n.getHours() % 12 || 12}:${String(n.getMinutes()).padStart(2,'0')}<small>${n.getHours() < 12 ? 'AM' : 'PM'}</small>`;
-  $('date').textContent = n.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  $('date').textContent = n.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 // ---------------- weather (live from Open-Meteo) ----------------
@@ -249,6 +254,7 @@ async function loadWeather() {
     setWarn('weather');
   } catch (e) {
     setWarn('weather', 'weather offline');
+    clearTimeout(window._wxRetry); window._wxRetry = setTimeout(loadWeather, 60e3);
     if (/Loading/.test($('weather').textContent)) $('weather').innerHTML = '<h2>Weather</h2><div class="empty">Can\'t reach the weather service right now</div>';
   }
 }
@@ -340,7 +346,16 @@ async function nextPhoto() {
     const img = new Image();
     img.onload = () => {
       const show = $('p' + layer), hide = $('p' + (1 - layer));
-      show.style.backgroundImage = `url("${url}")`;
+      const pic = show.querySelector('.pic'), area = show.getBoundingClientRect();
+      // Shaped like the screen (within ~20%)? Fill it. Otherwise show the
+      // whole photo over a blurry, stretched copy of itself.
+      const ratio = (img.width / img.height) / (area.width / area.height);
+      pic.classList.toggle('cover', ratio > 0.83 && ratio < 1.2);
+      pic.style.backgroundImage = `url("${url}")`;
+      // Cheap blur: draw the photo tiny, then let it stretch.
+      const c = document.createElement('canvas'); c.width = 32; c.height = 18;
+      c.getContext('2d').drawImage(img, 0, 0, 32, 18);
+      show.querySelector('.fill').style.backgroundImage = `url("${c.toDataURL()}")`;
       show.classList.add('show'); hide.classList.remove('show');
       // free the photo that was on this layer before (keeps the Zero's RAM low)
       if (shownURL[layer]) URL.revokeObjectURL(shownURL[layer]);
